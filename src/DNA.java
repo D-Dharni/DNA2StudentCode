@@ -67,6 +67,7 @@ public class DNA {
                     // Compute hash for next chunk of same length
                     long nextHash = 0;
 
+                    // Recomputing the hash for the substring starting at j
                     for (int g = 0; g < lengthTandem; g++) {
                         nextHash = (nextHash * radix + sequence.charAt(j + g)) % modulo;
                     }
@@ -76,6 +77,7 @@ public class DNA {
                         count++;
                         j += lengthTandem;
                     }
+                    // Otherwise stop counting at this winow
                     else {
                         break;
                     }
