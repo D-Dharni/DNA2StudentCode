@@ -1,3 +1,5 @@
+import static java.util.Objects.hash;
+
 /**
  * DNA
  * <p>
@@ -20,84 +22,94 @@ public class DNA {
     public static final long modulo = 1000000007;
 
     public static int STRCount(String sequence, String STR) {
-        int lengthSequence = sequence.length();
-        int lengthTandem = STR.length();
+        int sequenceLength = sequence.length();
+        int STRLength = STR.length();
 
-        // Base case
-        if (lengthSequence < lengthTandem) {
+        // Base case:
+        if (sequenceLength < STRLength) {
             return 0;
         }
 
-        long strHash = 1;
-        // Value for removing left most character for rolling hash (radix^m-1)
-        for (int i = 1; i < lengthTandem; i++) {
-            strHash = (strHash * radix) % modulo;
+        // Get value for radix^(m-1) to subtract during rolling hash
+        long rollingHash = 1;
+        for (int i = 0; i < STRLength - 1; i++) {
+            rollingHash = (rollingHash * radix) % modulo;
         }
 
-        long tandemHash = 0;
-        // Compute the hash of the tandem
-        for (int i = 0; i < lengthTandem; i++) {
-            // Horner's formula: h = (h * R + t.charAt(i)) % p
-            tandemHash = (tandemHash * radix + STR.charAt(i)) % modulo;
-        }
+        // Compute hash for sequence for first window
+        long sequenceHash = calculateHash(sequence, STRLength, 0);
 
-        // Compute hash of the first window in the sequence
-        long sequenceHash = 0;
-        for (int i = 0; i < lengthTandem; i++) {
-            // Horner's formula
-            sequenceHash = (sequenceHash * radix + sequence.charAt(i)) % modulo;
-        }
 
-        int numberRepeat = 0;
+        // Compute hash for the STR
+        long STRHash = calculateHash(STR, STRLength, 0);
 
-        // Loop through every window in the sequence
-        for (int i = 0; i <= lengthSequence - lengthTandem; i++) {
-            // Check if hashing sequence is right
-            if (sequenceHash == tandemHash) {
-                // Assume correct (Monte Carlo)
 
-                // Variable to keep track of consecutive repeats
-                int count = 0;
+        // Rabin-Karp Algorithm:
 
-                // Marks the current position for the next repeat
-                int j = i;
+        int highestRun = 0;
+        int currentRun = 0;
 
-                // Loop through each window
-                while (j + lengthTandem <= lengthSequence) {
-                    // Compute hash for next chunk of same length
-                    long nextHash = 0;
+        // Loop from 0 to the last possible "window" for the STR
+        for (int i = 0; i <= sequenceLength - STRLength;) {
+            // Use Monte Carlo (assume correct)
+            if (STRHash == sequenceHash) {
+                // There is a match
+                currentRun++;
 
-                    // Recomputing the hash for the substring starting at j
-                    for (int g = 0; g < lengthTandem; g++) {
-                        nextHash = (nextHash * radix + sequence.charAt(j + g)) % modulo;
-                    }
+                // Increase index to check for next one
+                i += STRLength;
 
-                    // Increment if windows are the same and slide over
-                    if (nextHash == tandemHash) {
-                        count++;
-                        j += lengthTandem;
-                    }
-                    // Otherwise stop counting at this winow
-                    else {
-                        break;
-                    }
+                // Check if you can go another tandem repeat
+                if (i <= sequenceLength - STRLength) {
+                    // Recalculate hash for this value
+                    sequenceHash = calculateHash(sequence, STRLength, i);
                 }
-
-                // Change if it's the longest streak
-                if (count > numberRepeat) {
-                    numberRepeat = count;
+                // Not enough room for another STR
+                else {
+                    break;
                 }
             }
+            // No match
+            else {
+                // Check if new record
+                if (highestRun < currentRun) {
+                    highestRun = currentRun;
+                }
 
-            // Implement rolling hash
-            if (i + lengthTandem < lengthSequence) {
-                // Remove the old leftmost character
-                sequenceHash = (sequenceHash + modulo - strHash * sequence.charAt(i) % modulo) % modulo;
+                // Reset
+                currentRun = 0;
 
-                // Make space and add the new character
-                sequenceHash = (sequenceHash * radix + sequence.charAt(i+lengthTandem)) % modulo;
+                // Use Rabin-Karp to roll to next window
+                if (i + STRLength < sequenceLength) {
+                    // Remove the original hash using the precomputed value
+                    long originalHash = (rollingHash * sequence.charAt(i)) % modulo;
+                    sequenceHash = (sequenceHash - originalHash + modulo) % modulo;
+
+                    // Shift the hash
+                    sequenceHash = (sequenceHash * radix) % modulo;
+
+                    // Add the hash value of the new char
+                    sequenceHash = (sequenceHash + sequence.charAt(i + STRLength)) % modulo;
+                }
+
+                // Move to next character's window
+                i++;
             }
         }
-        return numberRepeat;
+
+        // Return the highest run
+        if (highestRun < currentRun) {
+            return currentRun;
+        }
+        return highestRun;
+    }
+
+    public static long calculateHash (String str, int length, int startingValue) {
+        long strHash = 0;
+        for (int i = startingValue; i < startingValue + length; i++) {
+            // Using Horner's method
+            strHash = (strHash * radix + str.charAt(i)) % modulo;
+        }
+        return strHash;
     }
 }
