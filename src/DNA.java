@@ -13,11 +13,7 @@ import static java.util.Objects.hash;
  */
 
 public class DNA {
-
-    /**
-     * TODO: Complete this function, STRCount(), to return longest consecutive run of STR in sequence.
-     */
-
+    // Constants for use throughout the code
     public static final int radix = 256;
     public static final long modulo = 1000000007;
 
@@ -42,7 +38,6 @@ public class DNA {
 
         // Compute hash for the STR
         long STRHash = calculateHash(STR, STRLength, 0);
-
 
         // Rabin-Karp Algorithm:
 
@@ -76,24 +71,43 @@ public class DNA {
                     highestRun = currentRun;
                 }
 
+                // Run just broke and 'i' is at the position where it did
+                if (currentRun > 0) {
+                    // Restart the search from the character after not a whole new window
+
+                    // Index of where run ended
+                    int startOfRunEnd = i - (currentRun * STRLength);
+
+                    // Set to run after
+                    i = startOfRunEnd + 1;
+
+                    // Recalculate hash using standard method
+                    if (i <= sequenceLength - STRLength) {
+                        sequenceHash = calculateHash (sequence, STRLength, i);
+                    }
+                    else {
+                        break;
+                    }
+                }
+                else {
+                    // Use Rabin-Karp to roll to next window
+                    if (i + STRLength < sequenceLength) {
+                        // Remove the original hash using the precomputed value
+                        long originalHash = (rollingHash * sequence.charAt(i)) % modulo;
+                        sequenceHash = (sequenceHash - originalHash + modulo) % modulo;
+
+                        // Shift the hash
+                        sequenceHash = (sequenceHash * radix) % modulo;
+
+                        // Add the hash value of the new char
+                        sequenceHash = (sequenceHash + sequence.charAt(i + STRLength)) % modulo;
+                    }
+
+                    // Move to next character's window
+                    i++;
+                }
                 // Reset
                 currentRun = 0;
-
-                // Use Rabin-Karp to roll to next window
-                if (i + STRLength < sequenceLength) {
-                    // Remove the original hash using the precomputed value
-                    long originalHash = (rollingHash * sequence.charAt(i)) % modulo;
-                    sequenceHash = (sequenceHash - originalHash + modulo) % modulo;
-
-                    // Shift the hash
-                    sequenceHash = (sequenceHash * radix) % modulo;
-
-                    // Add the hash value of the new char
-                    sequenceHash = (sequenceHash + sequence.charAt(i + STRLength)) % modulo;
-                }
-
-                // Move to next character's window
-                i++;
             }
         }
 
@@ -105,7 +119,10 @@ public class DNA {
     }
 
     public static long calculateHash (String str, int length, int startingValue) {
+        // Set the initial variable to zero
         long strHash = 0;
+
+        // Go from the startingValue so that hash can be calculated while within the sequence
         for (int i = startingValue; i < startingValue + length; i++) {
             // Using Horner's method
             strHash = (strHash * radix + str.charAt(i)) % modulo;
